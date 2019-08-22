@@ -16,15 +16,13 @@ export class GlobalErrorHandlerService extends ErrorHandler {
 
   handleError(error: any) {
 
-console.error('reza helps meaa')
     if (error instanceof HttpErrorResponse) {
 
       if ( error.status === 401){
-        console.log('reza')
         const routerService = this.injector.get(Router);
         const ngZone = this.injector.get(NgZone);
         ngZone.run(() => {
-          routerService.navigate(['login'], { skipLocationChange: true });
+          routerService.navigate(['/login'], { skipLocationChange: true });
         });
       }
       else

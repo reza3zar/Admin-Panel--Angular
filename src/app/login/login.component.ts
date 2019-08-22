@@ -1,4 +1,4 @@
-import { ɵConsole } from '@angular/core';
+import { ɵConsole, Inject } from '@angular/core';
 import { LoginManagerService } from './../Services/login-manager.service';
 import { AppUrl } from './../Services/Url';
 import { HttpClient } from "@angular/common/http";
@@ -7,7 +7,10 @@ import { LoginInfo } from '../Models/LoginInfo';
 import { Subscription } from 'rxjs';
 import { FormGroup, FormControl, Validators } from '@angular/forms';
 import { NbComponentStatus, NbGlobalPhysicalPosition, NbToastrService } from '@nebular/theme';
- 
+import { Router } from '@angular/router';
+import { CookieService } from 'ngx-cookie-service';
+import { WebStorageService, LOCAL_STORAGE } from 'angular-webstorage-service';
+
 @Component({
   selector: 'ngx-login',
   templateUrl: './login.component.html',
@@ -25,17 +28,30 @@ export class LoginComponent implements OnInit,OnDestroy {
 
   imgCaptchaIsloadedState:boolean;
   public url=AppUrl;
-  constructor( private loginService:LoginManagerService,private toastrService: NbToastrService){
+  constructor( private loginService:LoginManagerService,private toastrService: NbToastrService,
+    private router: Router, private cookieService: CookieService,
+    @Inject(LOCAL_STORAGE) private storage: WebStorageService,){
   
     }
  
 
-
+    setLoginInformationFromCooki(){
+      if(this.cookieService.check('loginInformationRememberMe') && this.cookieService.get('loginInformationRememberMe')=='true' ){
+        this.logininformation.userName= this.cookieService.get('loginInformationUserName');
+        this.logininformation.password= this.cookieService.get('loginInformationPassword');
+        this.logininformation.rememberMe=true;
+       }
+    }
   
  
     form:FormGroup;
     ngOnInit() {
-    this.logininformation=new LoginInfo();
+      this.logininformation=new LoginInfo();
+      this.setLoginInformationFromCooki();
+      this.keyPressUserName();
+      this.keyPressPassword();
+      
+
 
 
     this.form=new FormGroup({    userName: new FormControl(this.logininformation.userName,Validators.required),
@@ -68,7 +84,7 @@ export class LoginComponent implements OnInit,OnDestroy {
 
   refreshChaptcha(){
     // throw new Error('Valid token not returned');
-    this.showToast('danger', 'شرح خطا', 'خطای اعتبارسنجی');
+    // 
 
     this.imgCaptchaIsloadedState=false;
     var datenow=new Date();
@@ -81,7 +97,7 @@ export class LoginComponent implements OnInit,OnDestroy {
     const config = {
       status: type,
       destroyByClick: true,
-      duration: 2000,
+      duration: 5000,
       hasIcon: true,
       position:  NbGlobalPhysicalPosition.TOP_RIGHT,
       preventDuplicates: false,
@@ -101,9 +117,15 @@ export class LoginComponent implements OnInit,OnDestroy {
  
 
 signToSystem(isSignINStatus) {
+
     this.isSignIn=isSignINStatus;
     this.isSingUp=!isSignINStatus;
   }
+
+  addDays(date: Date, days: number): Date {
+    date.setDate(date.getDate() + days);
+    return date;
+}
 
   loginToSystem():void{
     if (this.form.invalid)  
@@ -112,27 +134,50 @@ signToSystem(isSignINStatus) {
  try {
    
   this.loginSubscriber= this.loginService.login(this.logininformation).subscribe(result=>{
-    console.log(result)
+    this.rememberMeCookiManagement();
+    this.storage.set('userInfo',result);
+    this.cookieService.set('userInfo',JSON.stringify(result));
+   this.router.navigate(['/pages/dashboard']);
   },error=>{
-    // console.error(error.error.CaptchaCode)
-  
+    this.refreshChaptcha();
 
-
-    if(error==null || error.error==null || error.error.errors==null|| error==undefined|| error.error==undefined||error.error.errors==undefined)
-      return;
-    for (let err of error.error.errors) {
-      console.log(err)
-      this.showError(err.message);
-  }
+    if(error!=null && error.error!=null && error.error.errors!=null && 
+      error!=undefined && error.error!=undefined && error.error.errors!=undefined && error.error.errors.​captchaCode!=null && error.error.errors.​captchaCode!=undefined )
+    {
+      this.showToast('danger', 'شرح خطا', error.error.errors.​captchaCode[0]);
+    }
+      
+     if(error!=null && error.status!=null && error.status!=undefined&& error.status==401){
+      this.showToast('danger', 'شرح خطا', '! شناسه کاربری و رمز عبور اشتباه است');
+     }
+ 
 });
  } catch (error) {
-   console.log('haj Reza')
  }
  
   }
 
+
+async  rememberMeCookiManagement(){
+    if(this.logininformation.rememberMe){
+      let expiredDate = new Date();
+      this.cookieService.set('loginInformation',JSON.stringify(this.logininformation));//,expiredDate.getDate()+7,'/',null,true,null)
+      this.cookieService.set('loginInformationUserName',this.logininformation.userName);
+      this.cookieService.set('loginInformationPassword',this.logininformation.password);
+      this.cookieService.set('loginInformationRememberMe',this.logininformation.rememberMe==true?'true':'false');
+    }
+    else{
+      if(this.cookieService.check('loginInformationUserName'))
+          this.cookieService.delete('loginInformationUserName');
+      if(this.cookieService.check('loginInformationPassword'))
+          this.cookieService.delete('loginInformationPassword');
+      if(this.cookieService.check('loginInformationRememberMe'))
+          this.cookieService.delete('loginInformationRememberMe');
+    }
+  }
+
   usernamehasValue:boolean;
-  keyPressUserName(event: any){
+  keyPressUserName(event?: any){
   if(this.logininformation.userName.length>0)
       this.usernamehasValue=true;
       else
@@ -143,7 +188,7 @@ signToSystem(isSignINStatus) {
   }
 
   PasswordValue:boolean;
-  keyPressPassword(event: any){
+  keyPressPassword(event?: any){
  
 
     if(this.logininformation.password.length>0)
@@ -184,4 +229,17 @@ signToSystem(isSignINStatus) {
     }
     
   }
+
+  tst(){
+   this.loginService.gettest().subscribe(re=>{
+     console.log(re);
+   })
+
+  }
+
+
+  rememberMeChangeValue(){
+    // console.log(this.logininformation.rememberMe)
+  }
+
 }

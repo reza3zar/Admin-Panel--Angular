@@ -1,3 +1,4 @@
+import { HttpClientModule } from '@angular/common/http';
 import { LoginModule } from './../login/login.module';
 import { NgModule } from '@angular/core';
 import { NbMenuModule } from '@nebular/theme';

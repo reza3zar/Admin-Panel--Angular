@@ -1,10 +1,15 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { LoginManagerService } from './../../../Services/login-manager.service';
+import { Component, OnDestroy, OnInit, Inject } from '@angular/core';
 import { NbMediaBreakpointsService, NbMenuService, NbSidebarService, NbThemeService } from '@nebular/theme';
 
 import { UserData } from '../../../@core/data/users';
 import { LayoutService } from '../../../@core/utils';
 import { map, takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
+import { WebStorageService, LOCAL_STORAGE } from 'angular-webstorage-service';
+import { LogoutInputModel } from '../../../Models/LogoutInputModel';
+import { CookieService } from 'ngx-cookie-service';
 
 @Component({
   selector: 'ngx-header',
@@ -30,30 +35,54 @@ export class HeaderComponent implements OnInit, OnDestroy {
       value: 'cosmic',
       name: 'کیهانی',
     },
+   
     // {
     //   value: 'corporate',
     //   name: 'Corporate',
     // },
   ];
 
-  currentTheme = 'default';
+  currentTheme = 'cosmic';
 
-  userMenu = [ { title: 'پروفایل' }, { title: 'خروج' } ];
+  userMenu = [ { title: 'پروفایل', icon: 'people' }, { title: 'خروج', icon: 'log-out' } ];
 
   constructor(private sidebarService: NbSidebarService,
               private menuService: NbMenuService,
               private themeService: NbThemeService,
               private userService: UserData,
               private layoutService: LayoutService,
-              private breakpointService: NbMediaBreakpointsService) {
+              private breakpointService: NbMediaBreakpointsService,
+              private loginService:LoginManagerService,
+              private router:Router,
+              @Inject(LOCAL_STORAGE) private storage: WebStorageService,
+              private cookieService: CookieService) {
   }
+  userName:string='';
+
+ 
 
   ngOnInit() {
-    this.currentTheme = this.themeService.currentTheme;
 
+    this.menuService.onItemClick()
+    .subscribe((event) => {
+      this.onContecxtItemSelection(event.item.title);
+    });
+
+
+    this.currentTheme = this.themeService.currentTheme;
+    let userName=this.storage.get('userInfo');
+    this.userName = userName.displayName
+
+console.log(this.userName)
     this.userService.getUsers()
       .pipe(takeUntil(this.destroy$))
-      .subscribe((users: any) => this.user = users.nick);
+      .subscribe((users: any) =>
+      {
+        this.user = users.nick;
+        this.user.name=this.userName
+        console.log(this.user)
+      }
+       );
 
     const { xl } = this.breakpointService.getBreakpointsMap();
     this.themeService.onMediaQueryChange()
@@ -71,12 +100,28 @@ export class HeaderComponent implements OnInit, OnDestroy {
       .subscribe(themeName => this.currentTheme = themeName);
   }
 
+  onContecxtItemSelection(title) {
+      this.logOut();
+  }
+
+  logOut(){
+    let userInfo=this.storage.get('userInfo');
+    this.loginService.logOut(userInfo).subscribe(result=>{
+    this.cookieService.delete('userInfo');
+    this.storage.remove('userInfo');
+
+    this.router.navigate(['login']);
+    });
+   }
+
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
   changeTheme(themeName: string) {
+
+    this.storage.set('themeName',themeName);
     this.themeService.changeTheme(themeName);
   }
 
@@ -90,5 +135,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
   navigateHome() {
     this.menuService.navigateHome();
     return false;
+  }
+
+  menuClick(event){
+    console.log('reza')
+    console.log(event)
   }
 }

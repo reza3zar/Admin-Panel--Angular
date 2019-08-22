@@ -1,3 +1,4 @@
+import { HttpModule } from '@angular/http';
 import { LoginComponent } from './login/login.component';
 /**
  * @license
@@ -6,8 +7,8 @@ import { LoginComponent } from './login/login.component';
  */
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { NgModule, ErrorHandler, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { NgModule, ErrorHandler, CUSTOM_ELEMENTS_SCHEMA, APP_INITIALIZER } from '@angular/core';
+import { HttpClientModule, HTTP_INTERCEPTORS, HttpClient } from '@angular/common/http';
 import { CoreModule } from './@core/core.module';
 import { ThemeModule } from './@theme/theme.module';
 import { AppComponent } from './app.component';
@@ -28,36 +29,40 @@ import {
 import { GlobalErrorHandlerService } from './global-error-handler.service';
  
 import { CustomInterceptor } from './Services/customInterceptor';
-
+import { StorageServiceModule} from 'angular-webstorage-service';
+import { CookieService } from 'ngx-cookie-service';
+ 
+ 
  
 
+ 
 @NgModule({
   declarations: [AppComponent,
 
   ],
   imports: [
     BrowserModule,
+    HttpClientModule,
+    StorageServiceModule,
     BrowserAnimationsModule,
     AppRoutingModule,
     ThemeModule.forRoot(),
     NbSidebarModule.forRoot(),
     NbMenuModule.forRoot(),
-    NbDatepickerModule.forRoot(),
     NbDialogModule.forRoot(),
     NbWindowModule.forRoot(),
     NbToastrModule.forRoot(),
-    NbChatModule.forRoot({
-      messageGoogleMapKey: 'AIzaSyA_wNuCzia92MAmdLRzmqitRGvCF7wCZPY',
-    }),
     CoreModule.forRoot(),
   ],
   providers:[
+   
     { provide: ErrorHandler, useClass: GlobalErrorHandlerService },
     {
       provide: HTTP_INTERCEPTORS,
       useClass: CustomInterceptor ,
       multi: true
-    }
+    },
+    CookieService 
   ],
   schemas: [ CUSTOM_ELEMENTS_SCHEMA ],
   bootstrap: [AppComponent],
